@@ -1,3 +1,7 @@
+*{
+    margin: 0;
+    padding: 0;
+}
 .chat{
     background-color: #fabfbf;
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
@@ -8,4 +12,6 @@
 }
 .msg{
     background-color: #fd7f7f;
+    padding: 1px 5px;
+    border-radius: 5px;
 }

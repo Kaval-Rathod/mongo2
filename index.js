@@ -4,11 +4,13 @@ const mongoose = require("mongoose");
 const path = require("path");
 const Chat = require("./models/chat.js");
 const { log } = require("console");
+const methodOverride = require("method-override");
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "/views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
 
 main()
   .then(() => {
@@ -20,26 +22,27 @@ async function main() {
   await mongoose.connect("mongodb://127.0.0.1:27017/wp");
 }
 
-// chat1.save().then((res)=>{
-//     console.log(res);
-// });
-
 app.get("/", (req, res) => {
   res.send("root is working");
 });
 
 //index route
 app.get("/chats", async (req, res) => {
-  let chats = await Chat.find();
-  console.log(chats);
-  res.render("index.ejs", { chats });
+  try {
+    let chats = await Chat.find();
+    console.log(chats);
+    res.render("index.ejs", { chats });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.get("/chats/new", (req, res) => {
   res.render("new.ejs");
 });
 
-app.post("/chats", (req, res) => {
+app.post("/chats", async (req, res) => {
   let { from, to, msg } = req.body;
   let newChat = new Chat({
     from: from,
@@ -50,20 +53,63 @@ app.post("/chats", (req, res) => {
 
   console.log(newChat);
 
-  newChat
-    .save()
-    .then((res) => {
-      console.log("chat was saved");
-    })
-    .catch((err) => {
-      console.log(err);
-    });
-
-  res.redirect("/chats");
+  try {
+    await newChat.save();
+    console.log("Chat was saved");
+    res.redirect("/chats");
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.get("/all", (req, res) => {
   res.render("th.ejs");
+});
+
+app.put("/chats/:id", async (req, res) => {
+  let { id } = req.params;
+  let { msg: newMsg } = req.body;
+  try {
+    let updatedChat = await Chat.findByIdAndUpdate(
+      id,
+      { msg: newMsg },
+      { runValidators: true, new: true }
+    );
+    console.log("Chat updated:", updatedChat);
+    res.redirect("/chats");
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.get("/chats/:id/edit", async (req, res) => {
+  let { id } = req.params;
+  try {
+    let chat = await Chat.findById(id);
+    res.render("edit.ejs", { chat });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// destroy route
+app.delete("/chats/:id", async (req, res) => {
+  let { id } = req.params;
+  try {
+    let chatDelete = await Chat.findByIdAndDelete(id);
+    if (chatDelete) {
+      console.log("Deleted chat:", chatDelete);
+    } else {
+      console.log("Chat not found");
+    }
+    res.redirect("/chats");
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.listen(8080, () => {
